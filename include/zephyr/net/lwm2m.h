@@ -247,6 +247,8 @@ struct lwm2m_ctx {
 	 */
 	bool bootstrap_mode;
 
+	bool registration_mode;
+
 	/** Socket File Descriptor */
 	int sock_fd;
 
