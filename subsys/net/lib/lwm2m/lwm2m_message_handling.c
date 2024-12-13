@@ -2391,12 +2391,14 @@ static int lwm2m_exec_handler(struct lwm2m_message *msg)
 		return ret;
 	}
 
+	args = (uint8_t *)coap_packet_get_payload(msg->in.in_cpkt, &args_len);
+
+
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 		uint8_t LWM2M_CONTENT_LEN_MAX = 90;
 		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
 		memset(system_text, 0, sizeof(system_text));
 		sprintf(system_text, "Object exec %d/%d/%d ", obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
-		uint8_t system_text_offset = strlen(system_text);
 		
 		int32_t err = str_util_byte_array_to_strcat_hexdump(
 			args,
@@ -2414,8 +2416,6 @@ static int lwm2m_exec_handler(struct lwm2m_message *msg)
 		system_log_api_queue_save(system_text, strlen(system_text));
 
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
-
-	args = (uint8_t *)coap_packet_get_payload(msg->in.in_cpkt, &args_len);
 
 	if (res->execute_cb) {
 		return res->execute_cb(obj_inst->obj_inst_id, args, args_len);

@@ -661,7 +661,6 @@ static bool sm_update_lifetime(int srv_obj_inst, uint32_t *lifetime)
 		lwm2m_set_u32(&LWM2M_OBJ(1, srv_obj_inst, 1), new_lifetime);
 		LOG_INF("Overwrite a server lifetime with default");
 	}
-
 	if (new_lifetime != *lifetime) {
 		*lifetime = new_lifetime;
 		return true;
@@ -1170,6 +1169,15 @@ static void sm_registration_done(void)
 	if (sm_is_registered() &&
 	    (client.trigger_update ||
 	     now >= next_update())) {
+			
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+		memset(system_text, 0, sizeof(system_text));
+		sprintf(system_text, "Registration lifetime expired");
+		// Print the system log
+		system_log_api_queue_save(system_text, strlen(system_text));
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		
 		set_sm_state_delayed(ENGINE_UPDATE_REGISTRATION, DELAY_FOR_ACK);
 	} else if (IS_ENABLED(CONFIG_LWM2M_QUEUE_MODE_ENABLED) &&
 	    (client.engine_state != ENGINE_REGISTRATION_DONE_RX_OFF) &&
@@ -1399,6 +1407,17 @@ static void sm_do_network_error(void)
 	    (k_uptime_get() - client.last_update) / MSEC_PER_SEC > client.lifetime) {
 		/* do full registration as there is no active registration or lifetime exceeded */
 		/* Keep the same server until out of retry */
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		if ((k_uptime_get() - client.last_update) / MSEC_PER_SEC > client.lifetime) {
+			char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+			memset(system_text, 0, sizeof(system_text));
+			sprintf(system_text, "Registration lifetime expired");
+			// Print the system log
+			system_log_api_queue_save(system_text, strlen(system_text));
+		}
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 		set_sm_state(ENGINE_DO_REGISTRATION);
 		return;
 	}
@@ -1710,7 +1729,16 @@ int lwm2m_rd_client_resume(void)
 		if (!client.last_update ||
 			(client.lifetime <= (k_uptime_get() - client.last_update) / MSEC_PER_SEC)) {
 			/* No lifetime left, register again */
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+			memset(system_text, 0, sizeof(system_text));
+			sprintf(system_text, "Registration lifetime expired");
+			// Print the system log
+			system_log_api_queue_save(system_text, strlen(system_text));
+		
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			client.engine_state = ENGINE_DO_REGISTRATION;
+			
 		} else {
 			/* Resume similarly like from QUEUE mode */
 			client.engine_state = ENGINE_REGISTRATION_DONE_RX_OFF;
