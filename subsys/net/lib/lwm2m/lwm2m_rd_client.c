@@ -64,7 +64,6 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include "lwm2m_util.h"
 #include "lwm2m_obj_server.h"
 
-#warning Changed lwm2m_rd_client.c for system log
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 #include <stdio.h>
 #include "system_log.h"
@@ -1169,7 +1168,7 @@ static void sm_registration_done(void)
 	if (sm_is_registered() &&
 	    (client.trigger_update ||
 	     now >= next_update())) {
-			
+
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
 		memset(system_text, 0, sizeof(system_text));
@@ -1177,7 +1176,7 @@ static void sm_registration_done(void)
 		// Print the system log
 		system_log_api_queue_save(system_text, strlen(system_text));
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
-		
+
 		set_sm_state_delayed(ENGINE_UPDATE_REGISTRATION, DELAY_FOR_ACK);
 	} else if (IS_ENABLED(CONFIG_LWM2M_QUEUE_MODE_ENABLED) &&
 	    (client.engine_state != ENGINE_REGISTRATION_DONE_RX_OFF) &&
@@ -1735,10 +1734,10 @@ int lwm2m_rd_client_resume(void)
 			sprintf(system_text, "Registration lifetime expired");
 			// Print the system log
 			system_log_api_queue_save(system_text, strlen(system_text));
-		
+
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			client.engine_state = ENGINE_DO_REGISTRATION;
-			
+
 		} else {
 			/* Resume similarly like from QUEUE mode */
 			client.engine_state = ENGINE_REGISTRATION_DONE_RX_OFF;

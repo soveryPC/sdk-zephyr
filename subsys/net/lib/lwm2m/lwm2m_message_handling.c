@@ -1100,7 +1100,6 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 	if (data_ptr && data_len > 0) {
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
-		#warning Changed lwm2m_message_handling.c for system log
 		uint8_t LWM2M_CONTENT_LEN_MAX = 90;
 		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
 		memset(system_text, 0, sizeof(system_text));
@@ -1121,7 +1120,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
                 data_len,
                 LWM2M_CONTENT_LEN_MAX
             );
-			
+
             // Log hexdump error
             if (err == -E2BIG)
             {
@@ -1143,7 +1142,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			uint8_t copy_len = MIN(write_buf_len, LWM2M_CONTENT_LEN_MAX);
 			memcpy(&system_text[system_text_offset], write_buf, copy_len);
-#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG)) 
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = strlen((char *)write_buf) + 1;
 			break;
@@ -1268,7 +1267,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 			}
 
 			*(int16_t *)write_buf = temp32;
-			
+
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			sprintf(lwm2m_content, "%d", *(int16_t *)write_buf);
@@ -1284,7 +1283,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 			if (ret < 0) {
 				break;
 			}
-			
+
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			sprintf(lwm2m_content, "%d", *(int8_t *)write_buf);
@@ -1298,7 +1297,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 		case LWM2M_RES_TYPE_BOOL:
 		{
 			ret = engine_get_bool(&msg->in, (bool *)write_buf);
-			
+
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			sprintf(lwm2m_content, "%d", *(bool *)write_buf);
@@ -1311,7 +1310,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 		case LWM2M_RES_TYPE_FLOAT:
 		{
 			ret = engine_get_float(&msg->in, (double *)write_buf);
-			
+
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			sprintf(lwm2m_content, "%f", *(double *)write_buf);
@@ -1328,7 +1327,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			sprintf(lwm2m_content, "Obj link %d/%d", ((struct lwm2m_objlnk *)write_buf)->obj_id,((struct lwm2m_objlnk *)write_buf)->obj_inst );
-			strcat(system_text, lwm2m_content);	
+			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = sizeof(struct lwm2m_objlnk);
@@ -2399,20 +2398,20 @@ static int lwm2m_exec_handler(struct lwm2m_message *msg)
 		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
 		memset(system_text, 0, sizeof(system_text));
 		sprintf(system_text, "Object exec %d/%d/%d ", obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
-		
+
 		int32_t err = str_util_byte_array_to_strcat_hexdump(
 			args,
 			system_text,
 			args_len,
 			LWM2M_CONTENT_LEN_MAX
 		);
-		
+
 		// Log hexdump error
 		if (err == -E2BIG)
 		{
 			LOG_WRN("hexdump had too much data for the buffer");
 		}
-		
+
 		system_log_api_queue_save(system_text, strlen(system_text));
 
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
