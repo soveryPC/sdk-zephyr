@@ -64,6 +64,14 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include "lwm2m_util.h"
 #include "lwm2m_obj_server.h"
 
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+#include <stdio.h>
+#include "system_log.h"
+#include "lwm2m_system_log.h"
+#include "str_utils.h"
+#include "lwm2m_oot_object_ids.h"
+
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 #define LWM2M_RD_CLIENT_URI "rd"
 #define CLIENT_EP_LEN		CONFIG_LWM2M_RD_CLIENT_ENDPOINT_NAME_MAX_LENGTH
 #define CLIENT_BINDING_LEN sizeof("UQ")
@@ -523,6 +531,14 @@ static int do_registration_reply_cb(const struct coap_packet *response,
 		LOG_INF("Registration Done (EP='%s')",
 			client.server_ep);
 
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+		memset(system_text, 0, sizeof(system_text));
+		sprintf(system_text, "Registration Done (EP='%s')", client.server_ep);
+		// Print the system log
+		system_log_api_queue_save(system_text, strlen(system_text));
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 		return 0;
 	}
 
@@ -644,7 +660,6 @@ static bool sm_update_lifetime(int srv_obj_inst, uint32_t *lifetime)
 		lwm2m_set_u32(&LWM2M_OBJ(1, srv_obj_inst, 1), new_lifetime);
 		LOG_INF("Overwrite a server lifetime with default");
 	}
-
 	if (new_lifetime != *lifetime) {
 		*lifetime = new_lifetime;
 		return true;
@@ -804,6 +819,15 @@ static void sm_do_bootstrap_reg(void)
 	}
 
 	ret = sm_send_bootstrap_registration();
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+	char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+	memset(system_text, 0, sizeof(system_text));
+	sprintf(system_text, "LWM2M bootstrap start");
+	// Print the system log
+	system_log_api_queue_save(system_text, strlen(system_text));
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 	if (!ret) {
 		set_sm_state(ENGINE_BOOTSTRAP_REG_SENT);
 	} else {
@@ -1026,7 +1050,7 @@ static void sm_do_registration(void)
 
 		client.last_update = 0;
 		client.ctx->bootstrap_mode = false;
-
+		client.ctx->registration_mode = true;
 		/* clear out existing connection data */
 		if (client.ctx->sock_fd > -1) {
 			if (client.close_socket) {
@@ -1073,19 +1097,29 @@ static void sm_do_registration(void)
 		ret = lwm2m_engine_start(client.ctx);
 		if (ret < 0) {
 			LOG_ERR("Cannot init LWM2M engine (%d)", ret);
-			goto bootstrap_or_retry;
+			goto retry;
 		}
 	}
 
 	sm_send_registration_msg();
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+	char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+	memset(system_text, 0, sizeof(system_text));
+	sprintf(system_text, "LWM2M registration start");
+	// Print the system log
+	system_log_api_queue_save(system_text, strlen(system_text));
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 	return;
 
 bootstrap_or_retry:
-	lwm2m_engine_stop(client.ctx);
 	if (!client.server_disabled && fallback_to_bootstrap()) {
+		lwm2m_engine_stop(client.ctx);
 		return;
 	}
-
+retry:
+	lwm2m_engine_stop(client.ctx);
 	set_sm_state(ENGINE_NETWORK_ERROR);
 }
 
@@ -1126,12 +1160,23 @@ static int64_t calc_next_event(void)
 static void sm_registration_done(void)
 {
 	k_mutex_lock(&client.mutex, K_FOREVER);
+	// Registration is done.
+	client.ctx->registration_mode = false;
 
 	int64_t now = k_uptime_get();
 
 	if (sm_is_registered() &&
 	    (client.trigger_update ||
 	     now >= next_update())) {
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+		memset(system_text, 0, sizeof(system_text));
+		sprintf(system_text, "Registration lifetime expired");
+		// Print the system log
+		system_log_api_queue_save(system_text, strlen(system_text));
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 		set_sm_state_delayed(ENGINE_UPDATE_REGISTRATION, DELAY_FOR_ACK);
 	} else if (IS_ENABLED(CONFIG_LWM2M_QUEUE_MODE_ENABLED) &&
 	    (client.engine_state != ENGINE_REGISTRATION_DONE_RX_OFF) &&
@@ -1331,9 +1376,16 @@ static void sm_do_network_error(void)
 			return;
 		}
 
-		if (fallback_to_bootstrap()) {
-			return;
+		// Don't allow falling back to bootstrap if we're out of retries.
+		// This function sends us back to init state instead of IDLE state.
+		if (client.ctx->registration_mode)
+		{
+			LOG_ERR("Out of retries. Registration failed");
+			goto stop_engine;
 		}
+		// if (fallback_to_bootstrap()) {
+		// 	return;
+		// }
 		goto stop_engine;
 	}
 
@@ -1354,6 +1406,17 @@ static void sm_do_network_error(void)
 	    (k_uptime_get() - client.last_update) / MSEC_PER_SEC > client.lifetime) {
 		/* do full registration as there is no active registration or lifetime exceeded */
 		/* Keep the same server until out of retry */
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		if ((k_uptime_get() - client.last_update) / MSEC_PER_SEC > client.lifetime) {
+			char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+			memset(system_text, 0, sizeof(system_text));
+			sprintf(system_text, "Registration lifetime expired");
+			// Print the system log
+			system_log_api_queue_save(system_text, strlen(system_text));
+		}
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 		set_sm_state(ENGINE_DO_REGISTRATION);
 		return;
 	}
@@ -1381,6 +1444,10 @@ stop_engine:
 		if (client.ctx->bootstrap_mode) {
 			client.ctx->event_cb(client.ctx,
 					     LWM2M_RD_CLIENT_EVENT_BOOTSTRAP_REG_FAILURE);
+		} else if (client.ctx->registration_mode) {
+			client.ctx->event_cb(client.ctx,
+					     LWM2M_RD_CLIENT_EVENT_REGISTRATION_FAILURE);
+			client.ctx->registration_mode = false;
 		} else {
 			client.ctx->event_cb(client.ctx, LWM2M_RD_CLIENT_EVENT_NETWORK_ERROR);
 		}
@@ -1661,7 +1728,16 @@ int lwm2m_rd_client_resume(void)
 		if (!client.last_update ||
 			(client.lifetime <= (k_uptime_get() - client.last_update) / MSEC_PER_SEC)) {
 			/* No lifetime left, register again */
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+			memset(system_text, 0, sizeof(system_text));
+			sprintf(system_text, "Registration lifetime expired");
+			// Print the system log
+			system_log_api_queue_save(system_text, strlen(system_text));
+
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			client.engine_state = ENGINE_DO_REGISTRATION;
+
 		} else {
 			/* Resume similarly like from QUEUE mode */
 			client.engine_state = ENGINE_REGISTRATION_DONE_RX_OFF;

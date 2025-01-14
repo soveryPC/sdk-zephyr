@@ -25,6 +25,16 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include <stdlib.h>
 #include <string.h>
 
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+#include <stdio.h>
+#include <date_time.h>
+#include "system_log.h"
+#include "lwm2m_system_log.h"
+#include "str_utils.h"
+#include "lwm2m_oot_object_ids.h"
+
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 #include <zephyr/init.h>
 #include <zephyr/net/http/parser_url.h>
 #include <zephyr/net/lwm2m.h>
@@ -1089,43 +1099,89 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 	}
 
 	if (data_ptr && data_len > 0) {
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		uint8_t LWM2M_CONTENT_LEN_MAX = 90;
+		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+		memset(system_text, 0, sizeof(system_text));
+		uint8_t system_text_offset = strlen(system_text);
+		sprintf(system_text, "Object write %d/%d/%d ", obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 		switch (obj_field->data_type) {
 
 		case LWM2M_RES_TYPE_OPAQUE:
+		{
 			ret = lwm2m_write_handler_opaque(obj_inst, res, res_inst, msg, data_ptr,
 							 data_len);
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+            int32_t err = str_util_byte_array_to_strcat_hexdump(
+                data_ptr,
+                system_text,
+                data_len,
+                LWM2M_CONTENT_LEN_MAX
+            );
+
+            // Log hexdump error
+            if (err == -E2BIG)
+            {
+                LOG_WRN("hexdump had too much data for the buffer");
+            }
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = ret;
 			break;
+		}
 
 		case LWM2M_RES_TYPE_STRING:
+		{
 			ret = engine_get_string(&msg->in, write_buf, write_buf_len);
 			if (ret < 0) {
 				break;
 			}
 
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			uint8_t copy_len = MIN(write_buf_len, LWM2M_CONTENT_LEN_MAX);
+			memcpy(&system_text[system_text_offset], write_buf, copy_len);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = strlen((char *)write_buf) + 1;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_TIME:
+		{
 			ret = engine_get_time(&msg->in, &temp_time);
 			if (ret < 0) {
 				break;
 			}
 
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			if (write_buf_len == sizeof(time_t)) {
 				*(time_t *)write_buf = temp_time;
 				len = sizeof(time_t);
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+				sprintf(lwm2m_content, "%lld", *(time_t *)write_buf);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			} else if (write_buf_len == sizeof(uint32_t)) {
 				*(uint32_t *)write_buf = (uint32_t)temp_time;
 				len = sizeof(uint32_t);
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+				sprintf(lwm2m_content, "%d", *(uint32_t *)write_buf);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			} else {
 				LOG_ERR("Time resource buf len not supported %zu", write_buf_len);
 				ret = -EINVAL;
 			}
 
-			break;
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
+			break;
+		}
 		case LWM2M_RES_TYPE_U32:
+		{
 			ret = engine_get_s64(&msg->in, &temp64);
 			if (ret < 0) {
 				break;
@@ -1133,73 +1189,150 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 			*(uint32_t *)write_buf = temp64;
 			len = 4;
-			break;
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%d", *(uint32_t *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
+			break;
+		}
 		case LWM2M_RES_TYPE_U16:
+		{
 			ret = engine_get_s32(&msg->in, &temp32);
 			if (ret < 0) {
 				break;
 			}
 
 			*(uint16_t *)write_buf = temp32;
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%d", *(uint16_t *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = 2;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_U8:
+		{
 			ret = engine_get_s32(&msg->in, &temp32);
 			if (ret < 0) {
 				break;
 			}
 
 			*(uint8_t *)write_buf = temp32;
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%d", *(uint8_t *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = 1;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_S64:
+		{
 			ret = engine_get_s64(&msg->in, (int64_t *)write_buf);
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%lld", *(int64_t *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = 8;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_S32:
+		{
 			ret = engine_get_s32(&msg->in, (int32_t *)write_buf);
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%d", *(int32_t *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = 4;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_S16:
+		{
 			ret = engine_get_s32(&msg->in, &temp32);
 			if (ret < 0) {
 				break;
 			}
 
 			*(int16_t *)write_buf = temp32;
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%d", *(int16_t *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = 2;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_S8:
+		{
 			ret = engine_get_s32(&msg->in, &temp32);
 			if (ret < 0) {
 				break;
 			}
 
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%d", *(int8_t *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			*(int8_t *)write_buf = temp32;
 			len = 1;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_BOOL:
+		{
 			ret = engine_get_bool(&msg->in, (bool *)write_buf);
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%d", *(bool *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = 1;
 			break;
-
+		}
 		case LWM2M_RES_TYPE_FLOAT:
+		{
 			ret = engine_get_float(&msg->in, (double *)write_buf);
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "%f", *(double *)write_buf);
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = sizeof(double);
 			break;
-
+		}
 		case LWM2M_RES_TYPE_OBJLNK:
+		{
 			ret = engine_get_objlnk(&msg->in, (struct lwm2m_objlnk *)write_buf);
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+			char lwm2m_content[90];
+			sprintf(lwm2m_content, "Obj link %d/%d", ((struct lwm2m_objlnk *)write_buf)->obj_id,((struct lwm2m_objlnk *)write_buf)->obj_inst );
+			strcat(system_text, lwm2m_content);
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 			len = sizeof(struct lwm2m_objlnk);
 			break;
-
+		}
 		default:
 			LOG_ERR("unknown obj data_type %d", obj_field->data_type);
 			return -EINVAL;
@@ -1208,9 +1341,19 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 		if (ret < 0) {
 			return ret;
 		}
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+    // Print the system log if not a 10250 (HUAWEI_OBJECT_APP_DATA_CONTAINER_ID) write
+    if (HUAWEI_OBJECT_APP_DATA_CONTAINER_ID != obj_inst->obj->obj_id)
+    {
+		system_log_api_queue_save(system_text, strlen(system_text));
+	}
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 	} else {
 		return -ENOENT;
 	}
+
 
 	if (obj_field->data_type != LWM2M_RES_TYPE_OPAQUE) {
 
@@ -2249,6 +2392,30 @@ static int lwm2m_exec_handler(struct lwm2m_message *msg)
 
 	args = (uint8_t *)coap_packet_get_payload(msg->in.in_cpkt, &args_len);
 
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+		uint8_t LWM2M_CONTENT_LEN_MAX = 90;
+		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
+		memset(system_text, 0, sizeof(system_text));
+		sprintf(system_text, "Object exec %d/%d/%d ", obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
+
+		int32_t err = str_util_byte_array_to_strcat_hexdump(
+			args,
+			system_text,
+			args_len,
+			LWM2M_CONTENT_LEN_MAX
+		);
+
+		// Log hexdump error
+		if (err == -E2BIG)
+		{
+			LOG_WRN("hexdump had too much data for the buffer");
+		}
+
+		system_log_api_queue_save(system_text, strlen(system_text));
+
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 	if (res->execute_cb) {
 		return res->execute_cb(obj_inst->obj_inst_id, args, args_len);
 	}
@@ -3033,6 +3200,7 @@ int generate_notify_message(struct lwm2m_ctx *ctx, struct observe_node *obs, voi
 	cache_temp_info.entry_limit = 0;
 #endif
 
+
 	msg = lwm2m_get_message(ctx);
 	if (!msg) {
 		LOG_ERR("Unable to get a lwm2m message!");
@@ -3047,6 +3215,11 @@ msg_init:
 			ret = -EINVAL;
 			goto cleanup;
 		}
+
+#if (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
+#endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
+
 		/* copy path */
 		memcpy(&msg->path, path, sizeof(struct lwm2m_obj_path));
 		LOG_DBG("[%s] NOTIFY MSG START: %u/%u/%u(%u) token:'%s' [%s] %lld",
