@@ -8,6 +8,9 @@
 
 #include <errno.h>
 #include <stddef.h>
+#include <zephyr/kernel.h>
+#include <zephyr/init.h>
+#include <zephyr/drivers/gpio.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/arch/cpu.h>
@@ -32,6 +35,7 @@ LOG_MODULE_REGISTER(bt_driver);
 
 static K_KERNEL_STACK_DEFINE(rx_thread_stack, CONFIG_BT_DRV_RX_STACK_SIZE);
 static struct k_thread rx_thread_data;
+static k_tid_t tid;
 
 static struct {
 	struct net_buf *buf;
@@ -486,13 +490,11 @@ int __weak bt_hci_transport_setup(const struct device *dev)
 static int h4_open(void)
 {
 	int ret;
-	k_tid_t tid;
 
 	LOG_DBG("");
 
 	uart_irq_rx_disable(h4_dev);
 	uart_irq_tx_disable(h4_dev);
-
 	ret = bt_hci_transport_setup(h4_dev);
 	if (ret < 0) {
 		return -EIO;
@@ -506,6 +508,39 @@ static int h4_open(void)
 			      K_PRIO_COOP(CONFIG_BT_RX_PRIO),
 			      0, K_NO_WAIT);
 	k_thread_name_set(tid, "bt_rx_thread");
+
+	return 0;
+}
+static int h4_close(void)
+{
+	// Resetting the nrf52811
+#if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), nrf52_reset_gpios)
+	static const struct gpio_dt_spec nrf52_reset_pin =
+		GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), nrf52_reset_gpios);
+
+	if (!device_is_ready(nrf52_reset_pin.port)) {
+		return -ENODEV;
+	}
+
+	int ret = gpio_pin_configure_dt(&nrf52_reset_pin, GPIO_OUTPUT_HIGH);
+	if (ret) {
+		return ret;
+	}
+	k_sleep(K_MSEC(1));
+	// Pulse pin low to reset nRF52 sharing this pin for its reset
+	gpio_pin_configure_dt(&nrf52_reset_pin, GPIO_OUTPUT_LOW);
+	k_sleep(K_MSEC(1));
+	gpio_pin_configure_dt(&nrf52_reset_pin, GPIO_OUTPUT_HIGH);
+
+#endif // DT_NODE_HAS_PROP(DT_PATH(zephyr_user), nrf52_reset_gpios)
+
+	// Disable and reset the UART
+	uart_irq_rx_disable(h4_dev);
+	uart_irq_tx_disable(h4_dev);
+	uart_rx_disable(h4_dev);
+
+	// Terminate the current ble rx thread
+	k_thread_abort(tid);
 
 	return 0;
 }
@@ -532,6 +567,7 @@ static const struct bt_hci_driver drv = {
 	.bus		= BT_HCI_DRIVER_BUS_UART,
 	.open		= h4_open,
 	.send		= h4_send,
+	.close      = h4_close,
 #if defined(CONFIG_BT_HCI_SETUP)
 	.setup		= h4_setup
 #endif
