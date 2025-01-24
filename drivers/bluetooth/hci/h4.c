@@ -495,6 +495,7 @@ static int h4_open(void)
 
 	uart_irq_rx_disable(h4_dev);
 	uart_irq_tx_disable(h4_dev);
+
 	ret = bt_hci_transport_setup(h4_dev);
 	if (ret < 0) {
 		return -EIO;
@@ -511,6 +512,7 @@ static int h4_open(void)
 
 	return 0;
 }
+
 static int h4_close(void)
 {
 	// Resetting the nrf52811
@@ -531,7 +533,8 @@ static int h4_close(void)
 	gpio_pin_configure_dt(&nrf52_reset_pin, GPIO_OUTPUT_LOW);
 	k_sleep(K_MSEC(1));
 	gpio_pin_configure_dt(&nrf52_reset_pin, GPIO_OUTPUT_HIGH);
-
+#else // DT_NODE_HAS_PROP(DT_PATH(zephyr_user), nrf52_reset_gpios)
+#error "NRF52 RESET GPIO NOT FOUND. DO NOT PASS GO!"
 #endif // DT_NODE_HAS_PROP(DT_PATH(zephyr_user), nrf52_reset_gpios)
 
 	// Disable and reset the UART
