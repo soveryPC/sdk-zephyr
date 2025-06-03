@@ -3507,6 +3507,11 @@ int lwm2m_parse_peerinfo(char *url, struct lwm2m_ctx *client_ctx, bool is_firmwa
 #endif /* CONFIG_LWM2M_DNS_SUPPORT */
 	}
 
+	LOG_ERR("v0.7.6 DEBUG Using address is : %d.%d.%d.%d",
+		((struct sockaddr_in *)&client_ctx->remote_addr)->sin_addr.s4_addr[0],
+		((struct sockaddr_in *)&client_ctx->remote_addr)->sin_addr.s4_addr[1],
+		((struct sockaddr_in *)&client_ctx->remote_addr)->sin_addr.s4_addr[2],
+		((struct sockaddr_in *)&client_ctx->remote_addr)->sin_addr.s4_addr[3]);
 	/* set port */
 	if (client_ctx->remote_addr.sa_family == AF_INET6) {
 		net_sin6(&client_ctx->remote_addr)->sin6_port = htons(parser.port);
