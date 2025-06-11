@@ -1103,8 +1103,8 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 		uint8_t LWM2M_CONTENT_LEN_MAX = 90;
 		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
 		memset(system_text, 0, sizeof(system_text));
-		uint8_t system_text_offset = strlen(system_text);
 		sprintf(system_text, "Object write %d/%d/%d ", obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
+		uint8_t system_text_offset = strlen(system_text);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 		switch (obj_field->data_type) {
 
