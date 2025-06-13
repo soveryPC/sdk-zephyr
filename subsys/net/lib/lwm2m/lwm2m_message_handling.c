@@ -1142,7 +1142,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			uint8_t copy_len = MIN(write_buf_len, sizeof(system_text) - system_text_offset);
-			memcpy(&system_text[system_text_offset], write_buf, copy_len);
+			snprintf(&system_text[system_text_offset], copy_len, "%s", write_buf);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = strlen((char *)write_buf) + 1;
