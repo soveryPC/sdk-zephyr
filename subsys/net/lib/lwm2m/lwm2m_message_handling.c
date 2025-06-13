@@ -1103,7 +1103,8 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 		uint8_t LWM2M_CONTENT_LEN_MAX = 90;
 		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
 		memset(system_text, 0, sizeof(system_text));
-		sprintf(system_text, "Object write %d/%d/%d ", obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
+		snprintf(system_text, sizeof(system_text), "Object write %d/%d/%d ",
+			 obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
 		uint8_t system_text_offset = strlen(system_text);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 		switch (obj_field->data_type) {
@@ -1140,7 +1141,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 			}
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
-			uint8_t copy_len = MIN(write_buf_len, LWM2M_CONTENT_LEN_MAX);
+			uint8_t copy_len = MIN(write_buf_len, sizeof(system_text) - system_text_offset);
 			memcpy(&system_text[system_text_offset], write_buf, copy_len);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1161,13 +1162,13 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 				*(time_t *)write_buf = temp_time;
 				len = sizeof(time_t);
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
-				sprintf(lwm2m_content, "%lld", *(time_t *)write_buf);
+				snprintf(lwm2m_content, sizeof(lwm2m_content), "%lld", *(time_t *)write_buf);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			} else if (write_buf_len == sizeof(uint32_t)) {
 				*(uint32_t *)write_buf = (uint32_t)temp_time;
 				len = sizeof(uint32_t);
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
-				sprintf(lwm2m_content, "%d", *(uint32_t *)write_buf);
+				snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(uint32_t *)write_buf);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			} else {
 				LOG_ERR("Time resource buf len not supported %zu", write_buf_len);
@@ -1191,7 +1192,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 			len = 4;
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%d", *(uint32_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(uint32_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1208,7 +1209,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%d", *(uint16_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(uint16_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1226,7 +1227,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%d", *(uint8_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), *(uint8_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1239,7 +1240,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%lld", *(int64_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%lld", *(int64_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1252,7 +1253,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%d", *(int32_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(int32_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1270,7 +1271,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%d", *(int16_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(int16_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1286,7 +1287,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%d", *(int8_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(int8_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1300,7 +1301,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%d", *(bool *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(bool *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1313,7 +1314,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "%f", *(double *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%f", *(double *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -1326,7 +1327,9 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			sprintf(lwm2m_content, "Obj link %d/%d", ((struct lwm2m_objlnk *)write_buf)->obj_id,((struct lwm2m_objlnk *)write_buf)->obj_inst );
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "Obj link %d/%d",
+				 ((struct lwm2m_objlnk *)write_buf)->obj_id,
+				 ((struct lwm2m_objlnk *)write_buf)->obj_inst);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
@@ -2397,7 +2400,8 @@ static int lwm2m_exec_handler(struct lwm2m_message *msg)
 		uint8_t LWM2M_CONTENT_LEN_MAX = 90;
 		char system_text[LWM2M_SYSTEM_LOG_SINGLE_LOG_MAX_DATA_SIZE];
 		memset(system_text, 0, sizeof(system_text));
-		sprintf(system_text, "Object exec %d/%d/%d ", obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
+		snprintf(system_text, sizeof(system_text), "Object exec %d/%d/%d ",
+			 obj_inst->obj->obj_id, obj_inst->obj_inst_id, res->res_id);
 
 		int32_t err = str_util_byte_array_to_strcat_hexdump(
 			args,
