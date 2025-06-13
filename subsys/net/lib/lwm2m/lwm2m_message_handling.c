@@ -1227,7 +1227,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
-			snprintf(lwm2m_content, sizeof(lwm2m_content), *(uint8_t *)write_buf);
+			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(uint8_t *)write_buf);
 			strcat(system_text, lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
