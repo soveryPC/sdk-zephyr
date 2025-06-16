@@ -1176,7 +1176,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 			}
 
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			break;
@@ -1193,7 +1193,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(uint32_t *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			break;
@@ -1210,7 +1210,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(uint16_t *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = 2;
@@ -1228,7 +1228,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(uint8_t *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = 1;
@@ -1241,7 +1241,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%lld", *(int64_t *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = 8;
@@ -1254,7 +1254,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(int32_t *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = 4;
@@ -1272,7 +1272,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(int16_t *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = 2;
@@ -1288,7 +1288,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(int8_t *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			*(int8_t *)write_buf = temp32;
@@ -1302,7 +1302,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%d", *(bool *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = 1;
@@ -1315,7 +1315,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 #if (IS_ENABLED(CONFIG_SYSTEM_LOG))
 			char lwm2m_content[90];
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "%f", *(double *)write_buf);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = sizeof(double);
@@ -1330,7 +1330,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 			snprintf(lwm2m_content, sizeof(lwm2m_content), "Obj link %d/%d",
 				 ((struct lwm2m_objlnk *)write_buf)->obj_id,
 				 ((struct lwm2m_objlnk *)write_buf)->obj_inst);
-			strcat(system_text, lwm2m_content);
+			snprintf(system_text + strlen(system_text), sizeof(system_text) - strlen(system_text), "%s", lwm2m_content);
 #endif // (IS_ENABLED(CONFIG_SYSTEM_LOG))
 
 			len = sizeof(struct lwm2m_objlnk);
